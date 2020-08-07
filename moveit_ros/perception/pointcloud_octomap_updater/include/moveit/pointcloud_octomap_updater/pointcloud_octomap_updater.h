@@ -85,6 +85,9 @@ private:
   double scale_;
   double padding_;
   double max_range_;
+  // ADD by youjun
+  double min_range_;
+
   unsigned int point_subsample_;
   double max_update_rate_;
   std::string filtered_cloud_topic_;
@@ -99,6 +102,10 @@ private:
 
   std::unique_ptr<point_containment_filter::ShapeMask> shape_mask_;
   std::vector<int> mask_;
+
+  // ADD by youjun added for notification octomap is generated
+  ros::Publisher octomap_sig_publisher_;
+  void pubOctomapSig(int val);
 };
 }
 

@@ -897,6 +897,11 @@ bool IKFastKinematicsPlugin::searchPositionIK(const geometry_msgs::Pose& ik_pose
           ROS_DEBUG_STREAM_NAMED(name_, "Solution passes callback");
           return true;
         }
+        // ADD 20200406 found by youjun, to avoid get the non-continuous position
+        // that will cause cartesian with jumping position, but only can use on cartesian
+        // else {
+        //   break;
+        // }
       }
 
       ROS_DEBUG_STREAM_NAMED(name_, "Solution has error code " << error_code);

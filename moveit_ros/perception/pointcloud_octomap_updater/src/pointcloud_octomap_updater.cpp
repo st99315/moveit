@@ -42,6 +42,8 @@
 #include <tf2/LinearMath/Transform.h>
 #include <sensor_msgs/point_cloud2_iterator.h>
 #include <XmlRpcException.h>
+// ADD by youjun added for notification octomap is generated
+#include <std_msgs/Int32.h>
 
 #include <memory>
 
@@ -53,6 +55,7 @@ PointCloudOctomapUpdater::PointCloudOctomapUpdater()
   , scale_(1.0)
   , padding_(0.0)
   , max_range_(std::numeric_limits<double>::infinity())
+  , min_range_(0)  // ADD by youjun
   , point_subsample_(1)
   , max_update_rate_(0)
   , point_cloud_subscriber_(nullptr)
@@ -73,6 +76,8 @@ bool PointCloudOctomapUpdater::setParams(XmlRpc::XmlRpcValue& params)
       return false;
     point_cloud_topic_ = static_cast<const std::string&>(params["point_cloud_topic"]);
 
+    // ADD by youjun
+    readXmlParam(params, "min_range", &min_range_);
     readXmlParam(params, "max_range", &max_range_);
     readXmlParam(params, "padding_offset", &padding_);
     readXmlParam(params, "padding_scale", &scale_);
@@ -121,6 +126,9 @@ void PointCloudOctomapUpdater::start()
     point_cloud_subscriber_->registerCallback(boost::bind(&PointCloudOctomapUpdater::cloudMsgCallback, this, _1));
     ROS_INFO("Listening to '%s'", point_cloud_topic_.c_str());
   }
+
+  // ADD by youjun added for notification octomap is generated
+  octomap_sig_publisher_ = root_nh_.advertise<std_msgs::Int32>("octomap_sig", 10, false);
 }
 
 void PointCloudOctomapUpdater::stopHelper()
@@ -134,6 +142,9 @@ void PointCloudOctomapUpdater::stop()
   stopHelper();
   point_cloud_filter_ = nullptr;
   point_cloud_subscriber_ = nullptr;
+
+  // ADD by youjun added for notification octomap is generated
+  octomap_sig_publisher_.shutdown();
 }
 
 ShapeHandle PointCloudOctomapUpdater::excludeShape(const shapes::ShapeConstPtr& shape)
@@ -172,11 +183,17 @@ void PointCloudOctomapUpdater::cloudMsgCallback(const sensor_msgs::PointCloud2::
   ROS_DEBUG("Received a new point cloud message");
   ros::WallTime start = ros::WallTime::now();
 
+  // ADD by youjun added for notification octomap is generated
+  int signal = 0;
+
   if (max_update_rate_ > 0)
   {
     // ensure we are not updating the octomap representation too often
-    if (ros::Time::now() - last_update_time_ <= ros::Duration(1.0 / max_update_rate_))
+    if (ros::Time::now() - last_update_time_ <= ros::Duration(1.0 / max_update_rate_)) {
+      // ADD by youjun added for notification octomap is generated
+      pubOctomapSig(-1);
       return;
+    }
     last_update_time_ = ros::Time::now();
   }
 
@@ -200,11 +217,16 @@ void PointCloudOctomapUpdater::cloudMsgCallback(const sensor_msgs::PointCloud2::
       catch (tf2::TransformException& ex)
       {
         ROS_ERROR_STREAM("Transform error of sensor data: " << ex.what() << "; quitting callback");
+        // ADD by youjun added for notification octomap is generated
+        pubOctomapSig(-2);
         return;
       }
     }
-    else
+    else {
+      // ADD by youjun added for notification octomap is generated
+      pubOctomapSig(-3);
       return;
+    }
   }
 
   /* compute sensor origin in map frame */
@@ -215,11 +237,14 @@ void PointCloudOctomapUpdater::cloudMsgCallback(const sensor_msgs::PointCloud2::
   if (!updateTransformCache(cloud_msg->header.frame_id, cloud_msg->header.stamp))
   {
     ROS_ERROR_THROTTLE(1, "Transform cache was not updated. Self-filtering may fail.");
+    // ADD by youjun added for notification octomap is generated
+    pubOctomapSig(-4);
     return;
   }
 
+  // ADD min_range_ by youjun
   /* mask out points on the robot */
-  shape_mask_->maskContainment(*cloud_msg, sensor_origin_eigen, 0.0, max_range_, mask_);
+  shape_mask_->maskContainment(*cloud_msg, sensor_origin_eigen, min_range_, max_range_, mask_);
   updateMask(*cloud_msg, sensor_origin_eigen, mask_);
 
   octomap::KeySet free_cells, occupied_cells, model_cells, clip_cells;
@@ -314,6 +339,8 @@ void PointCloudOctomapUpdater::cloudMsgCallback(const sensor_msgs::PointCloud2::
   catch (...)
   {
     tree_->unlockRead();
+    // ADD by youjun added for notification octomap is generated
+    pubOctomapSig(-5);
     return;
   }
 
@@ -347,6 +374,9 @@ void PointCloudOctomapUpdater::cloudMsgCallback(const sensor_msgs::PointCloud2::
   catch (...)
   {
     ROS_ERROR("Internal error while updating octree");
+    // ADD by youjun added for notification octomap is generated
+    signal = -6;
+    pubOctomapSig(signal);
   }
   tree_->unlockWrite();
   ROS_DEBUG("Processed point cloud in %lf ms", (ros::WallTime::now() - start).toSec() * 1000.0);
@@ -358,5 +388,19 @@ void PointCloudOctomapUpdater::cloudMsgCallback(const sensor_msgs::PointCloud2::
     pcd_modifier.resize(filtered_cloud_size);
     filtered_cloud_publisher_.publish(*filtered_cloud);
   }
+
+  // ADD by youjun added for notification octomap is generated
+  if (signal == 0) {
+    pubOctomapSig(1);
+  }
 }
+
+// ADD by youjun added for notification octomap is generated
+void PointCloudOctomapUpdater::pubOctomapSig(int val)
+{
+  std_msgs::Int32 sig;
+  sig.data = val;
+  octomap_sig_publisher_.publish(sig);
+}
+
 }  // namespace occupancy_map_monitor
