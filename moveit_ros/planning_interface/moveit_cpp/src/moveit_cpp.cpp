@@ -184,11 +184,15 @@ bool MoveItCpp::loadPlanningPipelines(const PlanningPipelineOptions& options)
 
   // Retrieve group/pipeline mapping for faster lookup
   std::vector<std::string> group_names = robot_model_->getJointModelGroupNames();
+  
+  // ADD: 20200901 added by youjun for keep pipelines
+  groups_pipelines_map_.clear();
   for (const auto& pipeline_entry : planning_pipelines_)
   {
     for (const auto& group_name : group_names)
     {
-      groups_pipelines_map_[group_name] = {};
+      // ADD: 20200901 added by youjun for keep pipelines
+      // groups_pipelines_map_[group_name] = {};
       const auto& pipeline = pipeline_entry.second;
       for (const auto& planner_configuration : pipeline->getPlannerManager()->getPlannerConfigurations())
       {
