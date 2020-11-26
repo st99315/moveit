@@ -51,7 +51,7 @@
 
 namespace trajectory_execution_manager
 {
-MOVEIT_CLASS_FORWARD(TrajectoryExecutionManager);
+MOVEIT_CLASS_FORWARD(TrajectoryExecutionManager);  // Defines TrajectoryExecutionManagerPtr, ConstPtr, WeakPtr... etc
 
 // Two modes:
 // Managed controllers
@@ -67,7 +67,7 @@ public:
 
   /// Definition of the function signature that is called when the execution of a pushed trajectory completes
   /// successfully.
-  typedef boost::function<void(std::size_t)> PathSegmentCompleteCallback;
+  using PathSegmentCompleteCallback = boost::function<void(std::size_t)>;
 
   /// Data structure that represents information necessary to execute a trajectory
   struct TrajectoryExecutionContext
@@ -339,8 +339,7 @@ private:
   std::vector<TrajectoryExecutionContext*> trajectories_;
   std::deque<TrajectoryExecutionContext*> continuous_execution_queue_;
 
-  std::unique_ptr<pluginlib::ClassLoader<moveit_controller_manager::MoveItControllerManager> >
-      controller_manager_loader_;
+  std::unique_ptr<pluginlib::ClassLoader<moveit_controller_manager::MoveItControllerManager> > controller_manager_loader_;
   moveit_controller_manager::MoveItControllerManagerPtr controller_manager_;
 
   bool verbose_;

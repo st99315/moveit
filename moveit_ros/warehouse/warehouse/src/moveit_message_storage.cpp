@@ -35,11 +35,7 @@
 /* Author: Ioan Sucan */
 
 #include <moveit/warehouse/moveit_message_storage.h>
-#include <moveit/macros/diagnostics.h>
-DIAGNOSTIC_PUSH
-SILENT_UNUSED_PARAM
 #include <warehouse_ros/database_loader.h>
-DIAGNOSTIC_PUSH
 #include <boost/regex.hpp>
 #include <memory>
 #include <utility>
@@ -49,8 +45,7 @@ moveit_warehouse::MoveItMessageStorage::MoveItMessageStorage(warehouse_ros::Data
 {
 }
 
-void moveit_warehouse::MoveItMessageStorage::filterNames(const std::string& regex,
-                                                         std::vector<std::string>& names) const
+void moveit_warehouse::MoveItMessageStorage::filterNames(const std::string& regex, std::vector<std::string>& names) const
 {
   if (!regex.empty())
   {

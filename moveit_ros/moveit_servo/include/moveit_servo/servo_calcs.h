@@ -34,40 +34,47 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*******************************************************************************/
+ *******************************************************************************/
 
 #pragma once
 
+// C++
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 // ROS
+#include <control_msgs/JointJog.h>
+#include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit_msgs/ChangeDriftDimensions.h>
 #include <moveit_msgs/ChangeControlDimensions.h>
 #include <sensor_msgs/JointState.h>
-#include <std_msgs/Int8.h>
 #include <std_msgs/Float64.h>
-#include <control_msgs/JointJog.h>
-#include <geometry_msgs/TwistStamped.h>
+#include <std_msgs/Int8.h>
+#include <std_srvs/Empty.h>
+#include <tf2_eigen/tf2_eigen.h>
 #include <trajectory_msgs/JointTrajectory.h>
 
 // moveit_servo
 #include <moveit_servo/servo_parameters.h>
 #include <moveit_servo/status_codes.h>
 #include <moveit_servo/low_pass_filter.h>
-#include <moveit_servo/joint_state_subscriber.h>
 
 namespace moveit_servo
 {
 class ServoCalcs
 {
 public:
-  ServoCalcs(ros::NodeHandle& nh, const ServoParameters& parameters,
-             const planning_scene_monitor::PlanningSceneMonitorPtr& planning_scene_monitor,
-             const std::shared_ptr<JointStateSubscriber>& joint_state_subscriber);
+  ServoCalcs(ros::NodeHandle& nh, ServoParameters& parameters,
+             const planning_scene_monitor::PlanningSceneMonitorPtr& planning_scene_monitor);
 
-  /** \brief Start and stop the timer where we do work and publish outputs */
+  ~ServoCalcs();
+
+  /** \brief Start the timer where we do work and publish outputs */
   void start();
-  void stop();
 
   /**
    * Get the MoveIt planning link transform.
@@ -77,13 +84,35 @@ public:
    * @return true if a valid transform was available
    */
   bool getCommandFrameTransform(Eigen::Isometry3d& transform);
+  bool getCommandFrameTransform(geometry_msgs::TransformStamped& transform);
+
+  /**
+   * Get the End Effector link transform.
+   * The transform from the MoveIt planning frame to EE link
+   *
+   * @param transform the transform that will be calculated
+   * @return true if a valid transform was available
+   */
+  bool getEEFrameTransform(Eigen::Isometry3d& transform);
+  bool getEEFrameTransform(geometry_msgs::TransformStamped& transform);
 
   /** \brief Pause or unpause processing servo commands while keeping the timers alive */
   void setPaused(bool paused);
 
+  /** \brief Change the controlled link. Often, this is the end effector
+   * This must be a link on the robot since MoveIt tracks the transform (not tf)
+   */
+  void changeRobotLinkCommandFrame(const std::string& new_command_frame);
+
 private:
-  /** \brief Timer method */
-  void run(const ros::TimerEvent& timer_event);
+  /** \brief Run the main calculation loop */
+  void mainCalcLoop();
+
+  /** \brief Do calculations for a single iteration. Publish one outgoing command */
+  void calculateSingleIteration();
+
+  /** \brief Stop the currently running thread */
+  void stop();
 
   /** \brief Do servoing calculations for Cartesian twist commands. */
   bool cartesianServoCalcs(geometry_msgs::TwistStamped& cmd, trajectory_msgs::JointTrajectory& joint_trajectory);
@@ -92,7 +121,7 @@ private:
   bool jointServoCalcs(const control_msgs::JointJog& cmd, trajectory_msgs::JointTrajectory& joint_trajectory);
 
   /** \brief Parse the incoming joint msg for the joints of our MoveGroup */
-  bool updateJoints();
+  void updateJoints();
 
   /** \brief If incoming velocity commands are from a unitless joystick, scale them to physical units.
    * Also, multiply by timestep to calculate a position change.
@@ -112,10 +141,10 @@ private:
   void suddenHalt(trajectory_msgs::JointTrajectory& joint_trajectory);
 
   /** \brief  Scale the delta theta to match joint velocity/acceleration limits */
-  void enforceSRDFAccelVelLimits(Eigen::ArrayXd& delta_theta);
+  void enforceVelLimits(Eigen::ArrayXd& delta_theta);
 
   /** \brief Avoid overshooting joint limits */
-  bool enforceSRDFPositionLimits();
+  bool enforcePositionLimits();
 
   /** \brief Possibly calculate a velocity scaling factor, due to proximity of
    * singularity and direction of motion
@@ -145,8 +174,8 @@ private:
   void calculateJointVelocities(sensor_msgs::JointState& joint_state, const Eigen::ArrayXd& delta_theta);
 
   /** \brief Convert joint deltas to an outgoing JointTrajectory command.
-    * This happens for joint commands and Cartesian commands.
-    */
+   * This happens for joint commands and Cartesian commands.
+   */
   bool convertDeltasToOutgoingCmd(trajectory_msgs::JointTrajectory& joint_trajectory);
 
   /** \brief Gazebo simulations have very strict message timestamp requirements.
@@ -186,16 +215,16 @@ private:
   bool changeControlDimensions(moveit_msgs::ChangeControlDimensions::Request& req,
                                moveit_msgs::ChangeControlDimensions::Response& res);
 
+  /** \brief Service callback to reset Servo status, e.g. so the arm can move again after a collision */
+  bool resetServoStatus(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
+
   ros::NodeHandle nh_;
 
   // Parameters from yaml
-  const ServoParameters& parameters_;
+  ServoParameters& parameters_;
 
   // Pointer to the collision environment
   planning_scene_monitor::PlanningSceneMonitorPtr planning_scene_monitor_;
-
-  // Subscriber to the latest joint states
-  const std::shared_ptr<JointStateSubscriber> joint_state_subscriber_;
 
   // Track the number of cycles during which motion has not occurred.
   // Will avoid re-publishing zero velocities endlessly.
@@ -218,7 +247,7 @@ private:
 
   const moveit::core::JointModelGroup* joint_model_group_;
 
-  moveit::core::RobotStatePtr kinematic_state_;
+  moveit::core::RobotStatePtr current_state_;
 
   // incoming_joint_state_ is the incoming message. It may contain passive joints or other joints we don't care about.
   // (mutex protected below)
@@ -233,8 +262,6 @@ private:
   trajectory_msgs::JointTrajectoryConstPtr last_sent_command_;
 
   // ROS
-  ros::Timer timer_;
-  ros::Duration period_;
   ros::Subscriber joint_state_sub_;
   ros::Subscriber twist_stamped_sub_;
   ros::Subscriber joint_cmd_sub_;
@@ -244,10 +271,14 @@ private:
   ros::Publisher outgoing_cmd_pub_;
   ros::ServiceServer drift_dimensions_server_;
   ros::ServiceServer control_dimensions_server_;
+  ros::ServiceServer reset_servo_status_;
+
+  // Main tracking / result publisher loop
+  std::thread thread_;
+  bool stop_requested_;
 
   // Status
   StatusCode status_ = StatusCode::NO_WARNING;
-  bool stop_requested_ = false;
   bool paused_ = false;
   bool twist_command_is_stale_ = false;
   bool joint_command_is_stale_ = false;
@@ -268,17 +299,19 @@ private:
   // The dimesions to control. In the command frame. [x, y, z, roll, pitch, yaw]
   std::array<bool, 6> control_dimensions_ = { { true, true, true, true, true, true } };
 
-  // Amount we sleep when waiting
-  ros::Rate default_sleep_rate_ = 100;
-
-  // latest_state_mutex_ is used to protect the state below it
-  mutable std::mutex latest_state_mutex_;
+  // input_mutex_ is used to protect the state below it
+  mutable std::mutex input_mutex_;
   Eigen::Isometry3d tf_moveit_to_robot_cmd_frame_;
+  Eigen::Isometry3d tf_moveit_to_ee_frame_;
   geometry_msgs::TwistStampedConstPtr latest_twist_stamped_;
   control_msgs::JointJogConstPtr latest_joint_cmd_;
   ros::Time latest_twist_command_stamp_ = ros::Time(0.);
   ros::Time latest_joint_command_stamp_ = ros::Time(0.);
   bool latest_nonzero_twist_stamped_ = false;
   bool latest_nonzero_joint_cmd_ = false;
+
+  // input condition variable used for low latency mode
+  std::condition_variable input_cv_;
+  bool new_input_cmd_ = false;
 };
 }  // namespace moveit_servo

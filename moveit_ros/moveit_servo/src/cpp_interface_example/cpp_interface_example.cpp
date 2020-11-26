@@ -34,7 +34,7 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*******************************************************************************/
+ *******************************************************************************/
 
 #include <std_msgs/Int8.h>
 
@@ -75,7 +75,7 @@ private:
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, LOGNAME);
-  ros::NodeHandle nh;
+  ros::NodeHandle nh("~");
   ros::AsyncSpinner spinner(8);
   spinner.start();
 
@@ -150,6 +150,6 @@ int main(int argc, char** argv)
     ++num_commands;
   }
 
-  servo.stop();
+  servo.setPaused(true);
   return 0;
 }

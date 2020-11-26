@@ -35,11 +35,16 @@
 
 // SA
 #include "perception_widget.h"
+#include "header_widget.h"
 
 // Qt
-#include <QVBoxLayout>
-#include <QFormLayout>
 #include <QApplication>
+#include <QComboBox>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QLabel>
+#include <QLineEdit>
+#include <QVBoxLayout>
 
 namespace moveit_setup_assistant
 {
@@ -208,8 +213,7 @@ bool PerceptionWidget::focusLost()
                                                                            "PointCloudOctomapUpdater");
     config_data_->addGenericParameterToSensorPluginConfig("point_cloud_topic",
                                                           point_cloud_topic_field_->text().trimmed().toStdString());
-    config_data_->addGenericParameterToSensorPluginConfig("max_range",
-                                                          max_range_field_->text().trimmed().toStdString());
+    config_data_->addGenericParameterToSensorPluginConfig("max_range", max_range_field_->text().trimmed().toStdString());
     config_data_->addGenericParameterToSensorPluginConfig("point_subsample",
                                                           point_subsample_field_->text().trimmed().toStdString());
     config_data_->addGenericParameterToSensorPluginConfig("padding_offset",

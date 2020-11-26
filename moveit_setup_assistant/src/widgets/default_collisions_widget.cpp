@@ -34,16 +34,26 @@
 
 /* Author: Dave Coleman */
 
-#include <QHBoxLayout>
-#include <QMessageBox>
-#include <QProgressDialog>
-#include <QString>
-#include <QFont>
+#include <QAction>
 #include <QApplication>
 #include <QButtonGroup>
-#include <QRadioButton>
+#include <QCheckBox>
+#include <QFont>
+#include <QGroupBox>
+#include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QLabel>
+#include <QLineEdit>
 #include <QMenu>
+#include <QMessageBox>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QRadioButton>
+#include <QSlider>
+#include <QSpinBox>
+#include <QString>
+#include <QTableView>
+#include <QVBoxLayout>
 
 #include "default_collisions_widget.h"
 #include "header_widget.h"
@@ -379,10 +389,9 @@ void DefaultCollisionsWidget::collisionsChanged(const QModelIndex& index)
   // Hm. For some reason, QTableView doesn't change selection if we click a checkbox
   bool linear_mode = (view_mode_buttons_->checkedId() == LINEAR_MODE);
   const QItemSelection& selection = selection_model_->selection();
-  if ((linear_mode && !selection.contains(index)) ||  // in linear mode: index not in selection
-      (!linear_mode &&
-       !(selection.contains(index) ||  // in matrix mode: index or symmetric index not in selection
-         selection.contains(model_->index(index.column(), index.row())))))
+  if ((linear_mode && !selection.contains(index)) ||   // in linear mode: index not in selection
+      (!linear_mode && !(selection.contains(index) ||  // in matrix mode: index or symmetric index not in selection
+                         selection.contains(model_->index(index.column(), index.row())))))
   {
     QItemSelectionModel::SelectionFlags flags = QItemSelectionModel::Select | QItemSelectionModel::Current;
     if (linear_mode)

@@ -36,9 +36,14 @@
 
 // SA
 #include "passive_joints_widget.h"
+#include "header_widget.h"
+#include "double_list_widget.h"
+
 // Qt
 #include <QFormLayout>
+#include <QLabel>
 #include <QMessageBox>
+#include <QTableWidget>
 
 namespace moveit_setup_assistant
 {
@@ -53,10 +58,10 @@ PassiveJointsWidget::PassiveJointsWidget(QWidget* parent, const MoveItConfigData
 
   // Top Header Area ------------------------------------------------
 
-  HeaderWidget* header =
-      new HeaderWidget("Define Passive Joints", "Specify the set of passive joints (not actuated). Joint "
-                                                "state is not expected to be published for these joints.",
-                       this);
+  HeaderWidget* header = new HeaderWidget("Define Passive Joints",
+                                          "Specify the set of passive joints (not actuated). Joint "
+                                          "state is not expected to be published for these joints.",
+                                          this);
   layout->addWidget(header);
 
   // Joints edit widget

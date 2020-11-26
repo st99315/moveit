@@ -35,17 +35,21 @@
 /* Author: Dave Coleman */
 
 // Qt
+#include <QApplication>
+#include <QFileDialog>
+#include <QFont>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QProgressBar>
+#include <QPushButton>
+#include <QString>
+#include <QTextEdit>
 #include <QTimer>
 #include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QMessageBox>
-#include <QString>
-#include <QApplication>
-#include <QFont>
-#include <QFileDialog>
+
 // ROS
-#include <ros/ros.h>
 #include <ros/package.h>  // for getting file path for loadng images
 // SA
 #include "header_widget.h"  // title and instructions
@@ -110,11 +114,11 @@ StartScreenWidget::StartScreenWidget(QWidget* parent, const MoveItConfigDataPtr&
   right_layout->setAlignment(right_image_label_, Qt::AlignRight | Qt::AlignTop);
 
   // Top Label Area ---------------------------------------------------
-  HeaderWidget* header =
-      new HeaderWidget("MoveIt Setup Assistant", "These tools will assist you in creating a Semantic Robot "
-                                                 "Description Format (SRDF) file, various yaml configuration and many "
-                                                 "roslaunch files for utilizing all aspects of MoveIt functionality.",
-                       this);
+  HeaderWidget* header = new HeaderWidget("MoveIt Setup Assistant",
+                                          "These tools will assist you in creating a Semantic Robot "
+                                          "Description Format (SRDF) file, various yaml configuration and many "
+                                          "roslaunch files for utilizing all aspects of MoveIt functionality.",
+                                          this);
   layout->addWidget(header);
 
   // Select Mode Area -------------------------------------------------
@@ -188,9 +192,7 @@ StartScreenWidget::StartScreenWidget(QWidget* parent, const MoveItConfigDataPtr&
   layout->addLayout(hlayout);
 
   // Verticle Spacer
-  QWidget* vspacer = new QWidget(this);
-  vspacer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
-  layout->addWidget(vspacer);
+  layout->addItem(new QSpacerItem(20, 20, QSizePolicy::Minimum, QSizePolicy::Expanding));
 
   // Attach bottom layout
   layout->addWidget(next_label_);
@@ -337,11 +339,11 @@ bool StartScreenWidget::loadPackageSettings(bool show_warnings)
   if (!config_data_->getSetupAssistantYAMLPath(setup_assistant_path))
   {
     if (show_warnings)
-      QMessageBox::warning(
-          this, "Incorrect Directory/Package",
-          QString("The chosen package location exists but was not created using MoveIt Setup Assistant. "
-                  "If this is a mistake, provide the missing file: ")
-              .append(setup_assistant_path.c_str()));
+      QMessageBox::warning(this, "Incorrect Directory/Package",
+                           QString(
+                               "The chosen package location exists but was not created using MoveIt Setup Assistant. "
+                               "If this is a mistake, provide the missing file: ")
+                               .append(setup_assistant_path.c_str()));
     return false;
   }
 
@@ -502,8 +504,9 @@ bool StartScreenWidget::loadNewFiles()
   QApplication::processEvents();
 
   // Create blank SRDF file
-  const std::string blank_srdf = "<?xml version='1.0'?><robot name='" + config_data_->urdf_model_->getName() + "'></"
-                                                                                                               "robot>";
+  const std::string blank_srdf = "<?xml version='1.0'?><robot name='" + config_data_->urdf_model_->getName() +
+                                 "'></"
+                                 "robot>";
 
   // Load a blank SRDF file to the parameter server
   if (!setSRDFFile(blank_srdf))
@@ -687,10 +690,11 @@ bool StartScreenWidget::createFullURDFPath()
   {
     if (config_data_->urdf_path_.empty())  // no path could be resolved
     {
-      QMessageBox::warning(this, "Error Loading Files", QString("ROS was unable to find the package name '")
-                                                            .append(config_data_->urdf_pkg_name_.c_str())
-                                                            .append("'. Verify this package is inside your ROS "
-                                                                    "workspace and is a proper ROS package."));
+      QMessageBox::warning(this, "Error Loading Files",
+                           QString("ROS was unable to find the package name '")
+                               .append(config_data_->urdf_pkg_name_.c_str())
+                               .append("'. Verify this package is inside your ROS "
+                                       "workspace and is a proper ROS package."));
     }
     else
     {

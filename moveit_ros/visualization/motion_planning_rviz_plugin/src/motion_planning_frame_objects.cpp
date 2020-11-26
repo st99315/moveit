@@ -61,7 +61,7 @@ namespace
 QString subframe_poses_to_qstring(const moveit::core::FixedTransformsMap& subframes)
 {
   QString status_text = "\nIt has the subframes '";
-  for (auto subframe : subframes)
+  for (const auto& subframe : subframes)
   {
     status_text += QString::fromStdString(subframe.first) + "', '";
   }
@@ -73,7 +73,7 @@ QString subframe_poses_to_qstring(const moveit::core::FixedTransformsMap& subfra
 
 namespace moveit_rviz_plugin
 {
-void MotionPlanningFrame::shapesComboBoxChanged(const QString& text)
+void MotionPlanningFrame::shapesComboBoxChanged(const QString& /*text*/)
 {
   switch (ui_->shapes_combo_box->currentData().toInt())  // fetch shape ID from current combobox item
   {
@@ -128,8 +128,9 @@ void MotionPlanningFrame::publishScene()
 void MotionPlanningFrame::publishSceneIfNeeded()
 {
   if (isLocalSceneDirty() &&
-      QMessageBox::question(this, "Update PlanningScene", "You have local changes to your planning scene.\n"
-                                                          "Publish them to the move_group node?",
+      QMessageBox::question(this, "Update PlanningScene",
+                            "You have local changes to your planning scene.\n"
+                            "Publish them to the move_group node?",
                             QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
     publishScene();
 }
@@ -829,8 +830,7 @@ void MotionPlanningFrame::renameCollisionObject(QListWidgetItem* item)
       const moveit::core::FixedTransformsMap subframes = obj->subframe_poses_;  // Keep subframes
       // TODO(felixvd): Scale the subframes with the object
       ps->getWorldNonConst()->removeObject(obj->id_);
-      ps->getWorldNonConst()->addToObject(known_collision_objects_[item->type()].first, obj->shapes_,
-                                          obj->shape_poses_);
+      ps->getWorldNonConst()->addToObject(known_collision_objects_[item->type()].first, obj->shapes_, obj->shape_poses_);
       ps->getWorldNonConst()->setSubframesOfObject(obj->id_, subframes);
       if (scene_marker_)
       {
@@ -848,9 +848,10 @@ void MotionPlanningFrame::renameCollisionObject(QListWidgetItem* item)
     if (ab)
     {
       known_collision_objects_[item->type()].first = item_text;
-      moveit::core::AttachedBody* new_ab = new moveit::core::AttachedBody(
-          ab->getAttachedLink(), known_collision_objects_[item->type()].first, ab->getShapes(),
-          ab->getFixedTransforms(), ab->getTouchLinks(), ab->getDetachPosture(), ab->getSubframeTransforms());
+      moveit::core::AttachedBody* new_ab =
+          new moveit::core::AttachedBody(ab->getAttachedLink(), known_collision_objects_[item->type()].first,
+                                         ab->getShapes(), ab->getFixedTransforms(), ab->getTouchLinks(),
+                                         ab->getDetachPosture(), ab->getSubframeTransforms());
       cs.clearAttachedBody(ab->getName());
       cs.attachBody(new_ab);
     }
@@ -920,6 +921,7 @@ void MotionPlanningFrame::populateCollisionObjectsList()
 {
   ui_->collision_objects_list->setUpdatesEnabled(false);
   bool old_state = ui_->collision_objects_list->blockSignals(true);
+  bool octomap_in_scene = false;
 
   {
     QList<QListWidgetItem*> sel = ui_->collision_objects_list->selectedItems();
@@ -937,7 +939,10 @@ void MotionPlanningFrame::populateCollisionObjectsList()
       for (std::size_t i = 0; i < collision_object_names.size(); ++i)
       {
         if (collision_object_names[i] == planning_scene::PlanningScene::OCTOMAP_NS)
+        {
+          octomap_in_scene = true;
           continue;
+        }
 
         QListWidgetItem* item =
             new QListWidgetItem(QString::fromStdString(collision_object_names[i]), ui_->collision_objects_list, (int)i);
@@ -969,6 +974,7 @@ void MotionPlanningFrame::populateCollisionObjectsList()
     }
   }
 
+  ui_->clear_octomap_button->setEnabled(octomap_in_scene);
   ui_->collision_objects_list->blockSignals(old_state);
   ui_->collision_objects_list->setUpdatesEnabled(true);
   selectedCollisionObjectChanged();
@@ -1016,8 +1022,9 @@ void MotionPlanningFrame::computeImportGeometryFromText(const std::string& path)
     }
     else
     {
-      QMessageBox::warning(nullptr, "Loading scene geometry", "Failed to load scene geometry.\n"
-                                                              "See console output for more details.");
+      QMessageBox::warning(nullptr, "Loading scene geometry",
+                           "Failed to load scene geometry.\n"
+                           "See console output for more details.");
     }
   }
 }

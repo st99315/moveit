@@ -34,7 +34,7 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*******************************************************************************/
+ *******************************************************************************/
 
 #pragma once
 
@@ -52,6 +52,7 @@ struct ServoParameters
   std::string robot_link_command_frame;
   std::string command_out_topic;
   std::string planning_frame;
+  std::string ee_frame_name;
   std::string status_topic;
   std::string joint_command_in_topic;
   std::string command_in_type;
@@ -70,6 +71,7 @@ struct ServoParameters
   bool publish_joint_positions;
   bool publish_joint_velocities;
   bool publish_joint_accelerations;
+  bool low_latency_mode;
   // Collision checking
   bool check_collisions;
   std::string collision_check_type;

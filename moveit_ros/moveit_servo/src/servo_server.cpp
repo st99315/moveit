@@ -29,7 +29,7 @@
  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*******************************************************************************/
+ *******************************************************************************/
 
 /*      Title     : servo_server.cpp
  *      Project   : moveit_servo
@@ -52,7 +52,7 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(ROS_THREADS);
   spinner.start();
 
-  ros::NodeHandle nh;
+  ros::NodeHandle nh("~");
 
   // Load the planning scene monitor
   auto planning_scene_monitor = std::make_shared<planning_scene_monitor::PlanningSceneMonitor>("robot_description");
@@ -80,7 +80,7 @@ int main(int argc, char** argv)
   ros::waitForShutdown();
 
   // Stop the servo server
-  servo.stop();
+  servo.setPaused(true);
 
   return 0;
 }
